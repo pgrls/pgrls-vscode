@@ -1,0 +1,88 @@
+{
+  "name": "pgrls",
+  "displayName": "pgrls — Postgres RLS Linter",
+  "description": "Lint Postgres Row-Level Security policies from VS Code. Surfaces pgrls findings as diagnostics in the Problems panel, with hover documentation per rule.",
+  "version": "0.1.0",
+  "publisher": "pgrls",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pgrls/pgrls-vscode"
+  },
+  "homepage": "https://github.com/pgrls/pgrls",
+  "bugs": {
+    "url": "https://github.com/pgrls/pgrls-vscode/issues"
+  },
+  "icon": "media/icon.png",
+  "categories": ["Linters", "Other"],
+  "keywords": ["postgres", "postgresql", "rls", "row-level-security", "linter", "security"],
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:sql",
+    "onLanguage:plpgsql",
+    "workspaceContains:pgrls.toml"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "pgrls.lint",
+        "title": "pgrls: Lint database",
+        "category": "pgrls"
+      },
+      {
+        "command": "pgrls.clearDiagnostics",
+        "title": "pgrls: Clear findings",
+        "category": "pgrls"
+      },
+      {
+        "command": "pgrls.explainRule",
+        "title": "pgrls: Explain a rule…",
+        "category": "pgrls"
+      }
+    ],
+    "configuration": {
+      "title": "pgrls",
+      "properties": {
+        "pgrls.executable": {
+          "type": "string",
+          "default": "pgrls",
+          "description": "Path to the pgrls CLI. Defaults to `pgrls` on PATH; set absolute if installed in a venv."
+        },
+        "pgrls.databaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Postgres connection string for linting. Falls back to the DATABASE_URL environment variable, then to [database].url in pgrls.toml. Treat as a secret — prefer the environment variable for shared configs."
+        },
+        "pgrls.configPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to pgrls.toml. Leave empty to use the auto-discovery pgrls performs (CWD upward)."
+        },
+        "pgrls.lintOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run `pgrls lint` automatically when a .sql or .pgrls.toml file is saved. Disabled by default — linting hits the live database."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "npm run compile && node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.0"
+  }
+}
