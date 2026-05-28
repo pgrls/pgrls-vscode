@@ -2,7 +2,7 @@
   "name": "pgrls",
   "displayName": "pgrls — Postgres RLS Linter",
   "description": "Lint Postgres Row-Level Security policies from VS Code. Surfaces pgrls findings as diagnostics in the Problems panel, with rule documentation on hover, Quick-Fix actions for auto-fixable rules, and a status-bar finding count.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "pgrls",
   "license": "MIT",
   "repository": {
@@ -75,7 +75,7 @@
         "pgrls.lintOnSave": {
           "type": "boolean",
           "default": false,
-          "description": "Run `pgrls lint` automatically when a .sql or .pgrls.toml file is saved. Disabled by default — linting hits the live database."
+          "description": "Run `pgrls lint` automatically when a .sql, .plpgsql, or pgrls.toml file is saved. Disabled by default — linting hits the live database."
         }
       }
     }

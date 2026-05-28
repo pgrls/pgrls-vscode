@@ -5,9 +5,10 @@
 // Language Server. The CLI is the source of truth for rule logic, JSON
 // output shape, and configuration; the extension only translates
 // `pgrls lint --format json` output into VS Code Diagnostic objects
-// surfaced in the Problems panel, plus a hover provider that renders
-// `pgrls explain --format markdown <rule>` for a rule ID under the
-// cursor.
+// surfaced in the Problems panel, plus a hover provider that shows a
+// rule's title/severity/fixable status (from the session-cached
+// `pgrls explain --format json` catalog) for a rule ID under the
+// cursor, and Quick-Fix code actions that run `pgrls fix`.
 //
 // Why no LSP today: pgrls lints a *live database*, not source text.
 // LSP's incremental document-sync model doesn't map cleanly onto
@@ -21,6 +22,7 @@ import { renderDiagnostics } from './diagnostics';
 import { registerHoverProvider } from './hover';
 import { registerCodeActionProvider } from './codeActions';
 import { invalidateCatalog } from './catalog';
+import { ruleReferenceUrl } from './ruleDocs';
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 let outputChannel: vscode.OutputChannel;
@@ -122,9 +124,17 @@ async function lintCommand(): Promise<void> {
 
 /**
  * Run `pgrls fix`. `apply=false` previews the remediation SQL in a new
- * editor (dry-run, nothing touches the DB); `apply=true` runs
- * `--apply` after a confirmation modal, then re-lints to refresh the
- * findings.
+ * editor (dry-run, nothing touches the DB). Either mode shows a
+ * "nothing to fix" notification (and opens no editor) when the dry-run
+ * finds no auto-fixable findings.
+ *
+ * `apply=true` ALWAYS runs the dry-run first, shows the exact SQL in
+ * the output channel, and only then asks to confirm — so the user
+ * sees precisely what will run before any mutation. The confirmation
+ * is explicit that the target database is whatever pgrls resolves
+ * from `pgrls.databaseUrl`, then `$DATABASE_URL`, then `pgrls.toml`
+ * (the extension does not pin it), because a `$DATABASE_URL` pointed
+ * at a non-dev database is an easy and expensive mistake.
  */
 async function fixCommand(apply: boolean): Promise<void> {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -132,40 +142,56 @@ async function fixCommand(apply: boolean): Promise<void> {
         vscode.window.showWarningMessage('pgrls: open a workspace folder first.');
         return;
     }
+    const root = workspaceFolder.uri.fsPath;
 
-    if (apply) {
+    try {
+        // Dry-run first — for preview this is the whole job; for apply
+        // it's what we show the user before they commit to mutating a
+        // live database.
+        const sql = (await runFix(root, { apply: false })).stdout.trim();
+
+        if (!sql) {
+            vscode.window.showInformationMessage(
+                'pgrls: nothing to fix (no auto-fixable findings).',
+            );
+            return;
+        }
+
+        if (!apply) {
+            const doc = await vscode.workspace.openTextDocument({
+                language: 'sql',
+                content: sql,
+            });
+            await vscode.window.showTextDocument(doc, { preview: true });
+            return;
+        }
+
+        // apply: show the previewed SQL, then confirm against an
+        // explicit DB-resolution warning.
+        outputChannel.appendLine('pgrls fix preview:\n' + sql);
+        outputChannel.show(true);
         const choice = await vscode.window.showWarningMessage(
-            'pgrls: apply auto-fixes to the configured database? ' +
-                'This runs `pgrls fix --apply` in a single all-or-nothing ' +
-                'transaction.',
+            'pgrls: apply auto-fixes? They run in one all-or-nothing ' +
+                'transaction against the database pgrls resolves from ' +
+                'pgrls.databaseUrl, then $DATABASE_URL, then pgrls.toml — ' +
+                'NOT necessarily a local dev DB. The SQL previewed above is ' +
+                'in the pgrls output channel; pgrls re-checks the live ' +
+                'schema at apply time, so the applied statements may differ ' +
+                'if the database changed since the preview.',
             { modal: true },
             'Apply',
         );
         if (choice !== 'Apply') {
             return;
         }
-    }
 
-    outputChannel.appendLine(
-        apply ? 'Running pgrls fix --apply…' : 'Running pgrls fix (dry-run)…',
-    );
-    try {
-        const out = await runFix(workspaceFolder.uri.fsPath, { apply });
-        if (apply) {
-            outputChannel.appendLine(out.trim() || 'pgrls fix applied.');
-            vscode.window.showInformationMessage(
-                'pgrls: fixes applied. Re-linting…',
-            );
-            await lintCommand();
-        } else {
-            const doc = await vscode.workspace.openTextDocument({
-                language: 'sql',
-                content:
-                    out.trim() ||
-                    '-- pgrls fix: nothing to remediate (no auto-fixable findings).',
-            });
-            await vscode.window.showTextDocument(doc, { preview: true });
-        }
+        outputChannel.appendLine('Running pgrls fix --apply…');
+        const { stderr } = await runFix(root, { apply: true });
+        // `--apply` prints the applied SQL to stdout and its
+        // "applied N fixes" summary to stderr; surface the summary.
+        outputChannel.appendLine(stderr.trim() || 'pgrls fix applied.');
+        vscode.window.showInformationMessage('pgrls: fixes applied. Re-linting…');
+        await lintCommand();
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         outputChannel.appendLine(`pgrls fix failed: ${message}`);
@@ -216,19 +242,19 @@ async function explainRuleCommand(): Promise<void> {
     const rule = await vscode.window.showInputBox({
         prompt: 'Rule ID to explain (e.g. SEC003)',
         validateInput: (value) =>
-            /^[A-Z]+\d+$|^DIFF_[A-Z_]+$/.test(value.trim())
+            /^(?:SEC|PERF|HYG|VIEW)\d{3}$|^DIFF_[A-Z_]+$/.test(value.trim())
                 ? null
                 : 'Expected a rule ID like SEC001 or DIFF_DROP_POLICY.',
     });
     if (!rule) {
         return;
     }
-    // Implementation in a follow-up iteration: spawn `pgrls explain
-    // --format markdown <rule>`, render in a webview / Markdown
-    // preview. For the v0.1.0 scaffold, just open the canonical
-    // docs URL so the command appears in the palette.
-    const url = vscode.Uri.parse(
-        `https://github.com/pgrls/pgrls/blob/main/docs/RULES.md#rule-${rule.toLowerCase()}`,
-    );
+    // Open the rule's canonical reference in the user's browser. Routes
+    // DIFF_* rules to AGENTS.md and lint rules to docs/RULES.md via the
+    // shared mapping (see ruleDocs.ts) — the input box accepts both.
+    // (A future iteration could render `pgrls explain --format
+    // markdown <rule>` inline in a webview; opening the docs is the
+    // current, intended behavior.)
+    const url = vscode.Uri.parse(ruleReferenceUrl(rule.trim()));
     void vscode.env.openExternal(url);
 }

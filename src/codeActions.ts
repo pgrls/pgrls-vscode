@@ -6,9 +6,11 @@
 //
 //   • "pgrls: preview fixes (dry-run)" → runs `pgrls fix` and opens
 //     the remediation SQL in a new editor. Nothing touches the DB.
-//   • "pgrls: apply fixes to database" → runs `pgrls fix --apply`
-//     behind a confirmation modal (it mutates the live database in an
-//     all-or-nothing transaction).
+//   • "pgrls: apply fixes to database" → always dry-runs first, prints
+//     the exact SQL to the output channel, then asks to confirm via a
+//     modal that names the DB pgrls will resolve before running
+//     `pgrls fix --apply` (it mutates the live database in an
+//     all-or-nothing transaction). See `fixCommand` in extension.ts.
 //
 // `pgrls fix` is global (it remediates every fixable finding, not one
 // row), so the same pair of actions is offered whenever *any* fixable

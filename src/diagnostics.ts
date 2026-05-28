@@ -12,10 +12,11 @@
 //
 // A future iteration could map `location` to a file when a `.sql`
 // migration file in the workspace defines the policy — but that
-// requires SQL parsing on the extension side, which is out of scope
-// for the v0.1.0 scaffold.
+// requires SQL parsing on the extension side, which remains out of
+// scope.
 import * as vscode from 'vscode';
 import { Violation } from './runPgrls';
+import { ruleReferenceUrl } from './ruleDocs';
 
 const SEVERITY_MAP: Record<Violation['severity'], vscode.DiagnosticSeverity> = {
     error: vscode.DiagnosticSeverity.Error,
@@ -48,7 +49,7 @@ export function renderDiagnostics(
             // Link to the rule's per-rule anchor in docs/RULES.md
             // (lint rules) or AGENTS.md#diff-rules (DIFF_*) so a
             // reviewer can click through from the Problems panel.
-            target: ruleReferenceUri(v.rule_id),
+            target: vscode.Uri.parse(ruleReferenceUrl(v.rule_id)),
         };
         return diag;
     });
@@ -69,15 +70,4 @@ function anchorUri(): vscode.Uri {
         return vscode.Uri.parse('pgrls:findings');
     }
     return vscode.Uri.joinPath(folder.uri, 'pgrls.toml');
-}
-
-function ruleReferenceUri(ruleId: string): vscode.Uri {
-    if (ruleId.startsWith('DIFF_')) {
-        return vscode.Uri.parse(
-            'https://github.com/pgrls/pgrls/blob/main/AGENTS.md#diff-rules',
-        );
-    }
-    return vscode.Uri.parse(
-        `https://github.com/pgrls/pgrls/blob/main/docs/RULES.md#rule-${ruleId.toLowerCase()}`,
-    );
 }
