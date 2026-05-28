@@ -11,6 +11,7 @@
 // hover degrades to the static reference link it showed in v0.1.0.
 import * as vscode from 'vscode';
 import { getCatalog } from './catalog';
+import { ruleReferenceUrl } from './ruleDocs';
 
 const RULE_ID_PATTERN = /\b(?:SEC|PERF|HYG|VIEW)\d{3}\b|\bDIFF_[A-Z_]+\b/;
 
@@ -62,15 +63,5 @@ export function registerHoverProvider(): vscode.Disposable {
                 return new vscode.Hover(md, range);
             },
         },
-    );
-}
-
-function ruleReferenceUrl(ruleId: string): string {
-    if (ruleId.startsWith('DIFF_')) {
-        return 'https://github.com/pgrls/pgrls/blob/main/AGENTS.md#diff-rules';
-    }
-    return (
-        'https://github.com/pgrls/pgrls/blob/main/docs/RULES.md#rule-' +
-        ruleId.toLowerCase()
     );
 }

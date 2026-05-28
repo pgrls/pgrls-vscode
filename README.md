@@ -41,9 +41,17 @@ When a finding's rule is mechanically auto-fixable, the Problems-panel
 lightbulb offers two Quick-Fix actions:
 
 - **Preview fixes (dry-run)** — runs `pgrls fix` and opens the
-  remediation SQL in a new editor. Nothing touches the database.
-- **Apply fixes to database…** — runs `pgrls fix --apply` behind a
-  confirmation, in a single all-or-nothing transaction, then re-lints.
+  remediation SQL in a new editor. Nothing touches the database. If
+  there's nothing to remediate, it shows a notification instead.
+- **Apply fixes to database…** — always dry-runs first and prints the
+  SQL to the pgrls output channel, then asks to confirm. The
+  confirmation spells out that the target is whatever pgrls resolves
+  from `pgrls.databaseUrl` → `$DATABASE_URL` → `pgrls.toml` (not
+  necessarily a local dev DB), and that pgrls re-checks the live schema
+  at apply time — so the applied statements may differ from the preview
+  if the database changed in between. On confirm it runs
+  `pgrls fix --apply` in a single all-or-nothing transaction, then
+  re-lints.
 
 ## Hover documentation
 
@@ -51,7 +59,9 @@ Hovering on any rule ID (`SEC003`, `DIFF_DROP_POLICY`, etc.) in any open
 file shows the rule's **title, severity, and whether it's
 auto-fixable** inline (pulled once per session from
 `pgrls explain --format json`), plus a link to the full reference.
-Falls back to a plain reference link if pgrls isn't on `PATH`.
+Falls back to a plain reference link when pgrls isn't on `PATH` or the
+ID is a `DIFF_*` rule (those live in `AGENTS.md`, not the lint
+catalog the hover caches).
 
 ## Configuration
 
@@ -70,7 +80,7 @@ Falls back to a plain reference link if pgrls isn't on `PATH`.
 | `pgrls: Clear findings` | Clear the diagnostic collection. |
 | `pgrls: Explain a rule…` | Open the rule reference in your browser. |
 | `pgrls: Preview fixes (dry-run)` | Run `pgrls fix` and show the remediation SQL — nothing applied. |
-| `pgrls: Apply fixes to database…` | Run `pgrls fix --apply` (confirmation required), then re-lint. |
+| `pgrls: Apply fixes to database…` | Preview the SQL, confirm against a DB-resolution warning, run `pgrls fix --apply`, then re-lint. |
 
 ## Caveats
 

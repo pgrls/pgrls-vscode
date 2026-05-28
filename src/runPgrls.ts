@@ -75,15 +75,17 @@ export async function runLint(workspaceRoot: string): Promise<Violation[]> {
 }
 
 /**
- * Run `pgrls fix`. Dry-run by default (returns the SQL that *would*
- * be applied); `apply: true` runs `--apply` (all-or-nothing against
- * the configured database). Returns stdout (the SQL, or the apply
- * summary). Throws on a tool-level failure.
+ * Run `pgrls fix`. Dry-run by default (the SQL that *would* be
+ * applied lands on stdout); `apply: true` runs `--apply`
+ * (all-or-nothing against the configured database). Returns both
+ * streams as `{ stdout, stderr }` — stdout carries the SQL, and
+ * `--apply`'s "applied N fixes" summary arrives on stderr. Throws on
+ * a tool-level failure (non-zero exit).
  */
 export async function runFix(
     workspaceRoot: string,
     options: { apply: boolean },
-): Promise<string> {
+): Promise<{ stdout: string; stderr: string }> {
     const cfg = vscode.workspace.getConfiguration('pgrls');
     const executable = cfg.get<string>('executable') || 'pgrls';
     const databaseUrl = cfg.get<string>('databaseUrl');
@@ -110,7 +112,10 @@ export async function runFix(
             stderr.trim() || `pgrls fix exited with code ${exitCode}.`,
         );
     }
-    return stdout;
+    // Both streams matter: dry-run / --apply write the remediation SQL
+    // to stdout, while `--apply`'s "applied N fixes" summary goes to
+    // stderr. The caller decides which to surface.
+    return { stdout, stderr };
 }
 
 function spawnPgrls(
