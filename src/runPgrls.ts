@@ -74,6 +74,45 @@ export async function runLint(workspaceRoot: string): Promise<Violation[]> {
     return parsed.violations ?? [];
 }
 
+/**
+ * Run `pgrls fix`. Dry-run by default (returns the SQL that *would*
+ * be applied); `apply: true` runs `--apply` (all-or-nothing against
+ * the configured database). Returns stdout (the SQL, or the apply
+ * summary). Throws on a tool-level failure.
+ */
+export async function runFix(
+    workspaceRoot: string,
+    options: { apply: boolean },
+): Promise<string> {
+    const cfg = vscode.workspace.getConfiguration('pgrls');
+    const executable = cfg.get<string>('executable') || 'pgrls';
+    const databaseUrl = cfg.get<string>('databaseUrl');
+    const configPath = cfg.get<string>('configPath');
+
+    const args = ['fix'];
+    if (options.apply) {
+        args.push('--apply');
+    }
+    if (databaseUrl) {
+        args.push('--database-url', databaseUrl);
+    }
+    if (configPath) {
+        args.push('--config', configPath);
+    }
+
+    const { stdout, stderr, exitCode } = await spawnPgrls(
+        executable,
+        args,
+        workspaceRoot,
+    );
+    if (exitCode !== 0) {
+        throw new Error(
+            stderr.trim() || `pgrls fix exited with code ${exitCode}.`,
+        );
+    }
+    return stdout;
+}
+
 function spawnPgrls(
     executable: string,
     args: string[],
