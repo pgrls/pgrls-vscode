@@ -1,8 +1,8 @@
 {
   "name": "pgrls",
   "displayName": "pgrls — Postgres RLS Linter",
-  "description": "Lint Postgres Row-Level Security policies from VS Code. Surfaces pgrls findings as diagnostics in the Problems panel, with hover documentation per rule.",
-  "version": "0.1.0",
+  "description": "Lint Postgres Row-Level Security policies from VS Code. Surfaces pgrls findings as diagnostics in the Problems panel, with rule documentation on hover, Quick-Fix actions for auto-fixable rules, and a status-bar finding count.",
+  "version": "0.2.0",
   "publisher": "pgrls",
   "license": "MIT",
   "repository": {
@@ -41,6 +41,16 @@
       {
         "command": "pgrls.explainRule",
         "title": "pgrls: Explain a rule…",
+        "category": "pgrls"
+      },
+      {
+        "command": "pgrls.previewFixes",
+        "title": "pgrls: Preview fixes (dry-run)",
+        "category": "pgrls"
+      },
+      {
+        "command": "pgrls.applyFixes",
+        "title": "pgrls: Apply fixes to database…",
         "category": "pgrls"
       }
     ],

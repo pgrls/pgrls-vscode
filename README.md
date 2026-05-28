@@ -28,15 +28,30 @@ diagnostics in the Problems panel, with hover documentation per rule.
 Run **`pgrls: Lint database`** from the command palette
 (`Cmd+Shift+P` / `Ctrl+Shift+P`). Findings appear in the Problems panel
 with severity (error / warning / info), the rule ID as the diagnostic
-code, and a link to the canonical rule reference.
+code, and a link to the canonical rule reference. A **status-bar item**
+shows the live finding count (`$(shield) pgrls: 3 errors, 1 warning`);
+click it to re-lint.
 
 Enable **`pgrls.lintOnSave`** in settings to re-run automatically
 whenever a `.sql`, `.plpgsql`, or `pgrls.toml` file is saved.
 
+## Quick fixes
+
+When a finding's rule is mechanically auto-fixable, the Problems-panel
+lightbulb offers two Quick-Fix actions:
+
+- **Preview fixes (dry-run)** — runs `pgrls fix` and opens the
+  remediation SQL in a new editor. Nothing touches the database.
+- **Apply fixes to database…** — runs `pgrls fix --apply` behind a
+  confirmation, in a single all-or-nothing transaction, then re-lints.
+
 ## Hover documentation
 
 Hovering on any rule ID (`SEC003`, `DIFF_DROP_POLICY`, etc.) in any open
-file surfaces a link to the rule's reference paragraph.
+file shows the rule's **title, severity, and whether it's
+auto-fixable** inline (pulled once per session from
+`pgrls explain --format json`), plus a link to the full reference.
+Falls back to a plain reference link if pgrls isn't on `PATH`.
 
 ## Configuration
 
@@ -54,6 +69,8 @@ file surfaces a link to the rule's reference paragraph.
 | `pgrls: Lint database` | Run `pgrls lint` and surface findings as diagnostics. |
 | `pgrls: Clear findings` | Clear the diagnostic collection. |
 | `pgrls: Explain a rule…` | Open the rule reference in your browser. |
+| `pgrls: Preview fixes (dry-run)` | Run `pgrls fix` and show the remediation SQL — nothing applied. |
+| `pgrls: Apply fixes to database…` | Run `pgrls fix --apply` (confirmation required), then re-lint. |
 
 ## Caveats
 
