@@ -17,3 +17,7 @@ jobs:
       - run: npm ci
       - run: npm run compile
       - run: npm run lint
+      # Catch packaging regressions early (a missing icon, an invalid
+      # manifest) so an unpublishable build can't reach main — which is
+      # how the icon was absent for two releases before 0.2.2.
+      - run: node_modules/.bin/vsce package -o /tmp/pgrls-ci.vsix

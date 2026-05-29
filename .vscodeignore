@@ -10,3 +10,4 @@ tsconfig.json
 node_modules/**
 out/test/**
 .github/**
+RELEASING.md

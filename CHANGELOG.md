@@ -2,6 +2,21 @@
 
 All notable changes to the pgrls VS Code extension.
 
+## [0.2.2] - 2026-05-28
+
+### Added
+
+- Extension icon (a shield over table rows — security + row-level
+  security) for the Marketplace / Open VSX listing.
+
+### Internal
+
+- **Automated publishing.** Publishing a GitHub Release now packages the
+  extension once and ships the identical `.vsix` to the VS Code
+  Marketplace and Open VSX, then attaches it to the Release. See
+  [RELEASING.md](RELEASING.md) for the required `VSCE_PAT` / `OVSX_PAT`
+  secrets and the one-time Open VSX namespace setup.
+
 ## [0.2.1] - 2026-05-28
 
 ### Changed
